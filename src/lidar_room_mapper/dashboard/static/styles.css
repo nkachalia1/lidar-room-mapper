@@ -115,6 +115,66 @@ figcaption {
   border-bottom: 1px solid var(--line);
 }
 
+.clearance-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.clearance-status {
+  min-height: 34px;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(69, 196, 160, 0.14);
+  color: var(--accent);
+  font-size: 0.88rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.clearance-status[data-state="caution"] {
+  background: rgba(242, 184, 75, 0.14);
+  color: var(--warning);
+}
+
+.clearance-status[data-state="blocked"] {
+  background: rgba(255, 107, 107, 0.14);
+  color: var(--danger);
+}
+
+.clearance-status[data-state="waiting"] {
+  background: rgba(174, 183, 180, 0.1);
+  color: var(--muted);
+}
+
+.clearance-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.clearance-grid div {
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #171b23;
+}
+
+.clearance-grid span {
+  display: block;
+  color: var(--muted);
+  font-size: 0.76rem;
+}
+
+.clearance-grid strong {
+  display: block;
+  margin-top: 4px;
+  font-size: 1rem;
+  line-height: 1.1;
+}
+
 .toolbar {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

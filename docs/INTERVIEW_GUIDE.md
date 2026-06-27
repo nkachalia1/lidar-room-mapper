@@ -2,7 +2,7 @@
 
 ## 30-Second Pitch
 
-I built a Raspberry Pi robotics mapping stack that turns a low-cost RPLIDAR and Pi Camera into a live room-mapping demo. The system has hardware adapters, replayable data capture, a log-odds occupancy grid, and a browser dashboard, so it is both demoable and testable without the robot on hand.
+I built a Raspberry Pi robotics mapping stack that turns a low-cost RPLIDAR and Pi Camera into a live room-mapping and obstacle-awareness demo. The system has hardware adapters, replayable data capture, a log-odds occupancy grid, calibrated camera projection, and a browser dashboard, so it is both demoable and testable without the robot on hand.
 
 ## Technical Highlights
 
@@ -11,6 +11,8 @@ I built a Raspberry Pi robotics mapping stack that turns a low-cost RPLIDAR and 
 - Occupancy-grid mapping with ray tracing and log-odds confidence updates.
 - First-pass correlative scan matching for relative pose estimates.
 - Timestamped camera still recording and replay synchronization alongside LiDAR scans.
+- Calibrated LiDAR-to-camera projection validated at multiple target distances.
+- Per-scan clearance estimation for front, left, right, and nearest obstacle status.
 - Runtime state isolation with a thread-safe snapshot API.
 - No frontend build step, which keeps Pi deployment simple.
 - Tests for parsing, replay, and map integration.
@@ -20,6 +22,8 @@ I built a Raspberry Pi robotics mapping stack that turns a low-cost RPLIDAR and 
 - Why use log odds instead of raw probabilities?
 - How would you handle robot motion?
 - How would you timestamp and synchronize LiDAR and camera data?
+- How did you calibrate the LiDAR angle frame against the camera image?
+- How would you turn clearance telemetry into a real robot behavior?
 - What changes if the scanner reports bad quality or zero-distance points?
 - How would you make this production-ready for field deployment?
 
@@ -28,12 +32,13 @@ I built a Raspberry Pi robotics mapping stack that turns a low-cost RPLIDAR and 
 - The live dashboard defaults to a stationary robot at the map center.
 - Scan matching is a first-pass local alignment method, not a full SLAM backend with loop closure.
 - Camera frames are synchronized by timestamp, but they are periodic stills rather than a continuous stream.
+- Clearance is reactive telemetry, not a full navigation planner.
 - Hardware error handling is intentionally simple in the first pass.
 
 ## Strong Next Milestones
 
-1. Add wheel odometry or visual odometry as a pose prior.
-2. Improve scan matching with multi-resolution search and loop closure.
-3. Export ROS-compatible occupancy maps.
-4. Add a calibration command for LiDAR-to-camera timing offsets.
+1. Use clearance telemetry to implement a stop/turn behavior on a mobile base.
+2. Add wheel odometry or visual odometry as a pose prior.
+3. Improve scan matching with multi-resolution search and loop closure.
+4. Export ROS-compatible occupancy maps.
 5. Containerize the dashboard for repeatable Pi deployment.

@@ -10,6 +10,7 @@ from lidar_room_mapper.dashboard.server import DashboardServer
 from lidar_room_mapper.fusion import LidarCameraProjector
 from lidar_room_mapper.mapping import OccupancyGrid, ScanMatcher, export_grid
 from lidar_room_mapper.models import LidarScan, Pose2D
+from lidar_room_mapper.perception import ClearanceAnalyzer
 from lidar_room_mapper.runtime import MappingRuntime
 from lidar_room_mapper.sensors.camera import (
     NullCamera,
@@ -70,6 +71,15 @@ def build_parser() -> argparse.ArgumentParser:
     serve.add_argument("--camera-pitch-deg", type=float, default=None)
     serve.add_argument("--camera-roll-deg", type=float, default=None)
     serve.add_argument("--lidar-angle-offset-deg", type=float, default=None)
+    serve.add_argument(
+        "--front-angle-offset-deg",
+        type=float,
+        default=None,
+        help=(
+            "LiDAR angle offset that makes 0 degrees point forward for clearance; "
+            "defaults to the overlay rig offset when available"
+        ),
+    )
     serve.set_defaults(func=serve_command)
 
     record = subparsers.add_parser("record", help="Record scans to JSONL")
@@ -127,10 +137,12 @@ def serve_command(args: argparse.Namespace) -> int:
     scanner = make_scanner(args)
     camera = make_dashboard_camera(args)
     projector = make_dashboard_projector(args)
+    clearance_analyzer = make_clearance_analyzer(args, projector)
     runtime = MappingRuntime(
         scanner=scanner,
         camera=camera,
         projector=projector,
+        clearance_analyzer=clearance_analyzer,
         map_config=MapConfig(),
         runtime_config=RuntimeConfig(serial_baud=args.baud),
     )
@@ -197,6 +209,16 @@ def make_dashboard_projector(args: argparse.Namespace) -> LidarCameraProjector |
         f"lidar_offset={rig.lidar_angle_offset_deg:.1f}deg"
     )
     return projector
+
+
+def make_clearance_analyzer(
+    args: argparse.Namespace,
+    projector: LidarCameraProjector | None,
+) -> ClearanceAnalyzer:
+    angle_offset_deg = args.front_angle_offset_deg
+    if angle_offset_deg is None and projector is not None:
+        angle_offset_deg = projector.rig.lidar_angle_offset_deg
+    return ClearanceAnalyzer(angle_offset_deg=angle_offset_deg or 0.0)
 
 
 def default_frame_manifest_path(replay_path: Path) -> Path:

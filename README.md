@@ -21,6 +21,7 @@ This map was exported from a real RPLIDAR A1M8 recording captured on the Raspber
 - Live dashboard that can run directly on the Pi.
 - Data capture/replay workflow for reproducible debugging.
 - Calibrated camera-LiDAR projection with visible synchronization diagnostics.
+- Real-time obstacle-clearance telemetry for autonomy-oriented demos.
 - Hardware setup, architecture notes, and interview talking points.
 - Tests around the math and protocol parsing.
 
@@ -30,7 +31,7 @@ The goal was to turn inexpensive robotics hardware into a reliable mapping demo 
 
 The system is built around small adapters: simulated scans for development, replayed JSONL scans for reproducible demos, and a serial RPLIDAR driver for live capture. Incoming polar measurements are integrated into a log-odds occupancy grid with ray tracing. The dashboard serves the latest map state over HTTP, `scan-match` estimates relative motion between consecutive scans, and `export-map` writes PNG, PGM, and YAML outputs for portfolio screenshots or ROS-style workflows.
 
-The default mapper assumes the LiDAR is stationary at the map origin, and pose-aware export is available as an opt-in scan-matching mode. Camera frames are timestamped during recording and can be replayed in the dashboard beside the matching LiDAR scan. That keeps the live demo stable while creating a clear path toward full SLAM with pose estimation, scan matching, and sensor fusion.
+The default mapper assumes the LiDAR is stationary at the map origin, and pose-aware export is available as an opt-in scan-matching mode. Camera frames are timestamped during recording and can be replayed in the dashboard beside the matching LiDAR scan. The live runtime also derives front, left, right, and nearest-obstacle clearance from each scan, giving the project a clear path from mapping toward reactive navigation.
 
 ## Quick Start
 
@@ -57,6 +58,8 @@ Add `--overlay` to draw the scan paired with each camera frame:
 ```bash
 python -m lidar_room_mapper serve --source rplidar --port /dev/ttyUSB0 --camera --overlay --host 0.0.0.0
 ```
+
+The dashboard also shows clearance status. When `--overlay` is enabled, it reuses the calibrated LiDAR angle offset so the front-clearance sector matches the physical rig. For non-overlay experiments, use `--front-angle-offset-deg` to define which raw LiDAR angle points forward.
 
 ## Common Commands
 

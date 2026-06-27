@@ -41,6 +41,28 @@
           <span id="points">0 points</span>
         </div>
 
+        <section class="clearance-panel" aria-label="Obstacle clearance">
+          <div id="clearanceStatus" class="clearance-status" data-state="waiting">Waiting</div>
+          <div class="clearance-grid">
+            <div>
+              <span>Front</span>
+              <strong id="clearanceFront">--</strong>
+            </div>
+            <div>
+              <span>Nearest</span>
+              <strong id="clearanceNearest">--</strong>
+            </div>
+            <div>
+              <span>Left</span>
+              <strong id="clearanceLeft">--</strong>
+            </div>
+            <div>
+              <span>Right</span>
+              <strong id="clearanceRight">--</strong>
+            </div>
+          </div>
+        </section>
+
         <div class="toolbar">
           <button id="resetButton" title="Reset map" aria-label="Reset map">Reset</button>
           <button id="pauseButton" title="Pause display updates" aria-label="Pause display updates">

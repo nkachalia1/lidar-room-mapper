@@ -9,6 +9,7 @@ from lidar_room_mapper.config import MapConfig, RuntimeConfig
 from lidar_room_mapper.fusion import LidarCameraProjector, ProjectionResult
 from lidar_room_mapper.mapping import OccupancyGrid
 from lidar_room_mapper.models import CameraFrame, LidarScan
+from lidar_room_mapper.perception import ClearanceAnalyzer, ClearanceSnapshot
 from lidar_room_mapper.sensors.camera import NullCamera
 from lidar_room_mapper.sensors.lidar import Scanner
 
@@ -21,12 +22,16 @@ class MappingRuntime:
         scanner: Scanner,
         camera: Any | None = None,
         projector: LidarCameraProjector | None = None,
+        clearance_analyzer: ClearanceAnalyzer | None = None,
         map_config: MapConfig | None = None,
         runtime_config: RuntimeConfig | None = None,
     ) -> None:
         self.scanner = scanner
         self.camera = camera or NullCamera()
         self.projector = projector
+        self.clearance_analyzer = clearance_analyzer or ClearanceAnalyzer(
+            angle_offset_deg=projector.rig.lidar_angle_offset_deg if projector else 0.0
+        )
         self.grid = OccupancyGrid(map_config)
         self.config = runtime_config or RuntimeConfig()
         self._lock = threading.Lock()
@@ -35,6 +40,7 @@ class MappingRuntime:
         self._latest_scan: LidarScan | None = None
         self._latest_frame: CameraFrame | None = None
         self._latest_projection: ProjectionResult | None = None
+        self._latest_clearance: ClearanceSnapshot = self.clearance_analyzer.waiting()
         self._projection_scan_timestamp: float | None = None
         self._projection_frame_timestamp: float | None = None
         self._projection_sync_delta_ms: float | None = None
@@ -63,6 +69,7 @@ class MappingRuntime:
             self._latest_scan = None
             self._latest_frame = None
             self._latest_projection = None
+            self._latest_clearance = self.clearance_analyzer.waiting()
             self._projection_scan_timestamp = None
             self._projection_frame_timestamp = None
             self._projection_sync_delta_ms = None
@@ -97,6 +104,7 @@ class MappingRuntime:
             if self._latest_projection is not None:
                 fusion.update(self._latest_projection.to_payload())
             payload["fusion"] = fusion
+            payload["clearance"] = self._latest_clearance.to_payload()
             payload["runtime"] = {
                 "running": self._thread.is_alive() if self._thread else False,
                 "uptime_s": round(time.time() - self._started_at, 2)
@@ -130,10 +138,12 @@ class MappingRuntime:
                         height=frame.height,
                     )
                     sync_delta_ms = (scan.timestamp - frame.timestamp) * 1000.0
+                clearance = self.clearance_analyzer.analyze(scan)
 
                 with self._lock:
                     self.grid.integrate_scan(scan)
                     self._latest_scan = scan
+                    self._latest_clearance = clearance
                     if frame is not None:
                         self._latest_frame = frame
                     if projection is not None and frame is not None:

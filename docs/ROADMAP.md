@@ -13,11 +13,13 @@
 - Add quality filtering and per-scan diagnostics.
 - Export map snapshots.
 - Add systemd deployment and log rotation.
+- Surface front/side obstacle-clearance telemetry in the live dashboard.
 
 ## Milestone 3: Robot Autonomy
 
 - Improve pose input with wheel odometry, IMU, or visual odometry.
 - Transform LiDAR scans from robot frame to map frame.
+- Convert clearance status into a simple stop/turn behavior.
 - Add simple frontier detection for exploration targets.
 
 ## Milestone 4: Portfolio Polish

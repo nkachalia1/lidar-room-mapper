@@ -78,3 +78,5 @@ def test_runtime_pairs_projection_with_captured_frame() -> None:
     assert state["fusion"]["scan_timestamp"] == 100.0
     assert state["fusion"]["frame_timestamp"] == 100.02
     assert state["fusion"]["sync_delta_ms"] == -20.0
+    assert state["clearance"]["status"] == "clear"
+    assert state["clearance"]["front_clearance_m"] == 2.0

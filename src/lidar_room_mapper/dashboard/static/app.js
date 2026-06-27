@@ -7,6 +7,11 @@ const uptime = document.getElementById("uptime");
 const source = document.getElementById("source");
 const points = document.getElementById("points");
 const error = document.getElementById("error");
+const clearanceStatus = document.getElementById("clearanceStatus");
+const clearanceFront = document.getElementById("clearanceFront");
+const clearanceNearest = document.getElementById("clearanceNearest");
+const clearanceLeft = document.getElementById("clearanceLeft");
+const clearanceRight = document.getElementById("clearanceRight");
 const cameraViewport = document.getElementById("cameraViewport");
 const cameraImage = document.getElementById("cameraImage");
 const cameraOverlay = document.getElementById("cameraOverlay");
@@ -42,6 +47,7 @@ async function tick() {
       const state = await response.json();
       latestState = state;
       updateMetrics(state);
+      updateClearance(state);
       drawMap(state);
       updateCamera(state);
     } catch (err) {
@@ -62,6 +68,17 @@ function updateMetrics(state) {
   source.textContent = latest.source || "waiting";
   points.textContent = `${latest.points || 0} points`;
   error.textContent = runtime.error || "";
+}
+
+function updateClearance(state) {
+  const clearance = state.clearance || {};
+  const status = clearance.status || "waiting";
+  clearanceStatus.textContent = titleCase(status);
+  clearanceStatus.dataset.state = status;
+  clearanceFront.textContent = formatMeters(clearance.front_clearance_m);
+  clearanceNearest.textContent = formatMeters(clearance.nearest_distance_m);
+  clearanceLeft.textContent = formatMeters(clearance.left_clearance_m);
+  clearanceRight.textContent = formatMeters(clearance.right_clearance_m);
 }
 
 function drawMap(state) {
@@ -178,6 +195,17 @@ function drawCameraOverlay(camera, fusion) {
 
 function clearCameraOverlay() {
   cameraOverlayContext.clearRect(0, 0, cameraOverlay.width, cameraOverlay.height);
+}
+
+function titleCase(value) {
+  if (!value) return "Waiting";
+  return `${value.charAt(0).toUpperCase()}${value.slice(1)}`;
+}
+
+function formatMeters(value) {
+  if (!Number.isFinite(value)) return "--";
+  const precision = value < 1 ? 2 : 1;
+  return `${value.toFixed(precision)}m`;
 }
 
 function lidarPointColor(distanceM) {

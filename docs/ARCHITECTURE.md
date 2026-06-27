@@ -7,6 +7,7 @@ flowchart LR
   L["RPLIDAR / replay / simulator"] --> R["MappingRuntime"]
   C["Pi Camera v2"] --> R
   R --> G["OccupancyGrid"]
+  R --> P["ClearanceAnalyzer"]
   R --> H["HTTP dashboard"]
   H --> B["Browser canvas UI"]
 ```
@@ -15,6 +16,7 @@ The system is intentionally layered:
 
 - `sensors` exposes common scanner and camera interfaces.
 - `mapping` contains deterministic, testable occupancy-grid code.
+- `perception` turns scans into navigation-oriented obstacle telemetry.
 - `runtime` coordinates background sensor ingestion and snapshot state.
 - `dashboard` serves a local browser UI with no frontend build step.
 - `cli` wires everything into demo, recording, and validation workflows.
@@ -58,6 +60,22 @@ milliseconds, projected points, and filtering counts. Keeping the projection
 paired with the captured frame prevents newer scans from being drawn over an
 older image while the rig is moving.
 
+## Obstacle Clearance
+
+The runtime also computes per-scan clearance telemetry for autonomy-oriented
+demos. `ClearanceAnalyzer` applies the LiDAR front-angle offset, filters invalid
+measurements, and reports:
+
+- front clearance inside a narrow forward cone;
+- left and right side clearances;
+- nearest obstacle distance and bearing;
+- a simple `clear`, `caution`, or `blocked` status.
+
+When the camera overlay calibration is loaded, the dashboard reuses the same
+LiDAR angle offset so the visual overlay and the navigation-facing front sector
+agree. A separate `--front-angle-offset-deg` option is available for future
+mounting experiments that do not use the camera overlay.
+
 ## Why Replay Exists
 
 Hardware demos are fragile in interviews. Replay files give you a deterministic path:
@@ -72,7 +90,7 @@ Hardware demos are fragile in interviews. Replay files give you a deterministic 
 - Add robot motion and transform scans into a shared map frame.
 - Use synchronized camera frames for visual odometry or semantic map labels.
 - Save maps as PNG/PGM/YAML for ROS or navigation stacks.
-- Add scan matching for pose estimation.
+- Use clearance telemetry as the input to a simple stop/turn behavior.
 - Stream camera frames instead of periodic still captures.
 
 ## Map Export
