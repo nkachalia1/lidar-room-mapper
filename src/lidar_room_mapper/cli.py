@@ -6,7 +6,8 @@ from pathlib import Path
 
 from lidar_room_mapper.config import MapConfig, RuntimeConfig
 from lidar_room_mapper.dashboard.server import DashboardServer
-from lidar_room_mapper.mapping import OccupancyGrid, export_grid
+from lidar_room_mapper.mapping import OccupancyGrid, ScanMatcher, export_grid
+from lidar_room_mapper.models import LidarScan, Pose2D
 from lidar_room_mapper.runtime import MappingRuntime
 from lidar_room_mapper.sensors.camera import NullCamera, PiCameraCapture
 from lidar_room_mapper.sensors.lidar import (
@@ -51,7 +52,20 @@ def build_parser() -> argparse.ArgumentParser:
     add_source_args(export_map)
     export_map.add_argument("--output", default="artifacts/map", help="Output path prefix")
     export_map.add_argument("--scans", type=int, default=100, help="Number of scans to integrate")
+    export_map.add_argument(
+        "--pose-mode",
+        choices=("fixed", "scan-match"),
+        default="fixed",
+        help="How to place scans into the map",
+    )
     export_map.set_defaults(func=export_map_command)
+
+    scan_match = subparsers.add_parser(
+        "scan-match", help="Estimate relative motion between consecutive scans"
+    )
+    add_source_args(scan_match)
+    scan_match.add_argument("--scans", type=int, default=20, help="Number of scans to inspect")
+    scan_match.set_defaults(func=scan_match_command)
 
     return parser
 
@@ -133,9 +147,17 @@ def export_map_command(args: argparse.Namespace) -> int:
     scanner = make_scanner(args, replay_loop=False, replay_scan_hz=1000.0)
     grid = OccupancyGrid(MapConfig())
     integrated = 0
+    pose = Pose2D()
+    previous_scan: LidarScan | None = None
+    matcher = ScanMatcher() if args.pose_mode == "scan-match" else None
     try:
         for scan in scanner.iter_scans():
-            grid.integrate_scan(scan)
+            if matcher is not None and previous_scan is not None:
+                result = matcher.match(previous_scan, scan)
+                if result.accepted:
+                    pose = pose.compose(result.delta_pose)
+            grid.integrate_scan_at_pose(scan, pose)
+            previous_scan = scan
             integrated += 1
             if integrated >= args.scans:
                 break
@@ -148,11 +170,56 @@ def export_map_command(args: argparse.Namespace) -> int:
     paths = export_grid(grid, args.output)
     stats = grid.stats()
     print(f"integrated_scans={integrated}")
+    print(f"pose_mode={args.pose_mode}")
+    print(f"final_pose_m=({pose.x_m:.3f},{pose.y_m:.3f})")
+    print(f"final_heading_deg={pose.theta_rad * 57.29577951308232:.2f}")
     print(f"occupied_cells={stats.occupied_cells}")
     print(f"free_cells={stats.free_cells}")
     print(f"png={paths.png}")
     print(f"pgm={paths.pgm}")
     print(f"yaml={paths.yaml}")
+    return 0
+
+
+def scan_match_command(args: argparse.Namespace) -> int:
+    if args.scans <= 1:
+        raise SystemExit("--scans must be greater than one")
+
+    scanner = make_scanner(args, replay_loop=False, replay_scan_hz=1000.0)
+    matcher = ScanMatcher()
+    pose = Pose2D()
+    previous_scan: LidarScan | None = None
+    inspected = 0
+    try:
+        for scan in scanner.iter_scans():
+            inspected += 1
+            if previous_scan is not None:
+                result = matcher.match(previous_scan, scan)
+                if result.accepted:
+                    pose = pose.compose(result.delta_pose)
+                print(
+                    "scan={scan} dx_m={dx:.3f} dy_m={dy:.3f} dtheta_deg={theta:.2f} "
+                    "score={score:.5f} accepted={accepted} "
+                    "pose=({x:.3f},{y:.3f},{heading:.2f}deg)".format(
+                        scan=inspected,
+                        dx=result.delta_pose.x_m,
+                        dy=result.delta_pose.y_m,
+                        theta=result.heading_deg,
+                        score=result.score,
+                        accepted=str(result.accepted).lower(),
+                        x=pose.x_m,
+                        y=pose.y_m,
+                        heading=pose.theta_rad * 57.29577951308232,
+                    )
+                )
+            previous_scan = scan
+            if inspected >= args.scans:
+                break
+    finally:
+        scanner.close()
+
+    if inspected < 2:
+        raise SystemExit("Need at least two scans to estimate motion.")
     return 0
 
 

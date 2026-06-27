@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from math import cos, sin
 from time import time
 
 
@@ -29,6 +30,27 @@ class LidarScan:
 
     def valid_measurements(self) -> tuple[LidarMeasurement, ...]:
         return tuple(m for m in self.measurements if m.distance_mm > 0)
+
+
+@dataclass(frozen=True)
+class Pose2D:
+    """2D pose in meters and radians."""
+
+    x_m: float = 0.0
+    y_m: float = 0.0
+    theta_rad: float = 0.0
+
+    def transform_point(self, x_m: float, y_m: float) -> tuple[float, float]:
+        c = cos(self.theta_rad)
+        s = sin(self.theta_rad)
+        return (
+            self.x_m + c * x_m - s * y_m,
+            self.y_m + s * x_m + c * y_m,
+        )
+
+    def compose(self, relative: "Pose2D") -> "Pose2D":
+        x_m, y_m = self.transform_point(relative.x_m, relative.y_m)
+        return Pose2D(x_m=x_m, y_m=y_m, theta_rad=self.theta_rad + relative.theta_rad)
 
 
 @dataclass(frozen=True)

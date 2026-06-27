@@ -27,9 +27,9 @@ This map was exported from a real RPLIDAR A1M8 recording captured on the Raspber
 
 The goal was to turn inexpensive robotics hardware into a reliable mapping demo that can be shown live or replayed without the sensors attached. The project uses a Raspberry Pi 5 as the edge computer, a Slamtec RPLIDAR A1M8 as the range sensor, and an optional Pi Camera v2 for synchronized snapshots.
 
-The system is built around small adapters: simulated scans for development, replayed JSONL scans for reproducible demos, and a serial RPLIDAR driver for live capture. Incoming polar measurements are integrated into a log-odds occupancy grid with ray tracing. The dashboard serves the latest map state over HTTP, and `export-map` writes PNG, PGM, and YAML outputs for portfolio screenshots or ROS-style workflows.
+The system is built around small adapters: simulated scans for development, replayed JSONL scans for reproducible demos, and a serial RPLIDAR driver for live capture. Incoming polar measurements are integrated into a log-odds occupancy grid with ray tracing. The dashboard serves the latest map state over HTTP, `scan-match` estimates relative motion between consecutive scans, and `export-map` writes PNG, PGM, and YAML outputs for portfolio screenshots or ROS-style workflows.
 
-The current mapper assumes the LiDAR is stationary at the map origin. That keeps the first milestone honest and explainable: it produces a strong fixed-sensor room map, while leaving pose estimation, scan matching, and camera fusion as clear next engineering steps.
+The default mapper assumes the LiDAR is stationary at the map origin, and pose-aware export is available as an opt-in scan-matching mode. That keeps the live demo stable while creating a clear path toward full SLAM with pose estimation, scan matching, and camera fusion.
 
 ## Quick Start
 
@@ -75,6 +75,14 @@ Export a replayed map:
 
 ```bash
 python -m lidar_room_mapper export-map --source replay --input captures/first_room.jsonl --output artifacts/first_room --scans 200
+```
+
+For moving-sensor experiments, add `--pose-mode scan-match`.
+
+Estimate relative motion between replayed scans:
+
+```bash
+python -m lidar_room_mapper scan-match --source replay --input captures/first_room.jsonl --scans 20
 ```
 
 Print one integrated map summary:

@@ -21,13 +21,24 @@ The system is intentionally layered:
 
 ## Mapping Model
 
-The first version assumes the robot is stationary at the center of the map. Each LiDAR measurement is ray traced with Bresenham cells:
+The default live mapper assumes the robot is stationary at the center of the map. Each LiDAR measurement is ray traced with Bresenham cells:
 
 - Cells along the ray are nudged toward free space.
 - The endpoint is nudged toward occupied space when the distance is inside max range.
 - Log odds are clamped to avoid overconfidence.
 
 That tradeoff makes the demo reliable and explainable. The next evolution is pose tracking from wheel odometry, visual odometry, IMU, or scan matching.
+
+## Scan Matching
+
+The `scan-match` command estimates relative motion between consecutive LiDAR scans with a dependency-free correlative search:
+
+- Convert each scan into a bounded 2D point cloud.
+- Search small translations and rotations around the prior pose estimate.
+- Score each candidate by nearest-neighbor alignment error.
+- Compose the best relative transform into a cumulative 2D pose.
+
+This is intentionally a first SLAM building block rather than a full loop-closure system. It gives the project a clean place to add better scan matching, odometry, or camera-based pose priors later.
 
 ## Why Replay Exists
 
@@ -55,3 +66,5 @@ The `export-map` command integrates a bounded number of scans and writes three f
 - `.yaml`: map metadata with resolution, origin, and occupancy thresholds.
 
 The exported map uses trinary occupancy values: black for occupied cells, white for free cells, and gray for unknown cells.
+
+For moving-sensor experiments, `export-map --pose-mode scan-match` places each scan using the cumulative scan-matched pose instead of treating every scan as if it came from the map origin.

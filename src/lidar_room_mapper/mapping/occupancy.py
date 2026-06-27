@@ -5,7 +5,7 @@ from math import cos, radians, sin
 from typing import Iterable
 
 from lidar_room_mapper.config import MapConfig
-from lidar_room_mapper.models import LidarMeasurement, LidarScan
+from lidar_room_mapper.models import LidarMeasurement, LidarScan, Pose2D
 
 
 @dataclass(frozen=True)
@@ -17,7 +17,7 @@ class GridStats:
 
 
 class OccupancyGrid:
-    """Log-odds 2D occupancy grid with the robot fixed at the map center."""
+    """Log-odds 2D occupancy grid."""
 
     def __init__(self, config: MapConfig | None = None) -> None:
         self.config = config or MapConfig()
@@ -38,17 +38,26 @@ class OccupancyGrid:
         self._scans_integrated = 0
 
     def integrate_scan(self, scan: LidarScan) -> None:
+        self.integrate_scan_at_pose(scan, Pose2D())
+
+    def integrate_scan_at_pose(self, scan: LidarScan, pose: Pose2D) -> None:
         for measurement in scan.valid_measurements():
-            self.integrate_measurement(measurement)
+            self.integrate_measurement_at_pose(measurement, pose)
         self._scans_integrated += 1
 
     def integrate_measurement(self, measurement: LidarMeasurement) -> None:
+        self.integrate_measurement_at_pose(measurement, Pose2D())
+
+    def integrate_measurement_at_pose(
+        self, measurement: LidarMeasurement, pose: Pose2D
+    ) -> None:
         distance_m = min(measurement.distance_m, self.config.max_range_m)
         angle_rad = radians(measurement.angle_deg)
-        end_x_m = cos(angle_rad) * distance_m
-        end_y_m = sin(angle_rad) * distance_m
+        local_end_x_m = cos(angle_rad) * distance_m
+        local_end_y_m = sin(angle_rad) * distance_m
+        end_x_m, end_y_m = pose.transform_point(local_end_x_m, local_end_y_m)
 
-        robot_cell = self.world_to_cell(0.0, 0.0)
+        robot_cell = self.world_to_cell(pose.x_m, pose.y_m)
         end_cell = self.world_to_cell(end_x_m, end_y_m)
         if robot_cell is None or end_cell is None:
             return

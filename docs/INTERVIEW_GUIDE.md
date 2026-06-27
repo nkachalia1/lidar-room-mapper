@@ -9,6 +9,7 @@ I built a Raspberry Pi robotics mapping stack that turns a low-cost RPLIDAR and 
 - RPLIDAR protocol parser for the 5-byte standard scan response.
 - Replay/simulator modes for deterministic development.
 - Occupancy-grid mapping with ray tracing and log-odds confidence updates.
+- First-pass correlative scan matching for relative pose estimates.
 - Runtime state isolation with a thread-safe snapshot API.
 - No frontend build step, which keeps Pi deployment simple.
 - Tests for parsing, replay, and map integration.
@@ -23,15 +24,15 @@ I built a Raspberry Pi robotics mapping stack that turns a low-cost RPLIDAR and 
 
 ## Honest Limitations
 
-- The first version assumes a stationary robot at the map center.
+- The live dashboard defaults to a stationary robot at the map center.
+- Scan matching is a first-pass local alignment method, not a full SLAM backend with loop closure.
 - Camera frames are captured as periodic stills rather than a continuous stream.
-- The mapper does not yet perform scan matching or loop closure.
 - Hardware error handling is intentionally simple in the first pass.
 
 ## Strong Next Milestones
 
-1. Add wheel odometry or visual odometry and transform scans into a global frame.
-2. Export ROS-compatible occupancy maps.
-3. Add scan matching and pose estimation.
+1. Add wheel odometry or visual odometry as a pose prior.
+2. Improve scan matching with multi-resolution search and loop closure.
+3. Export ROS-compatible occupancy maps.
 4. Add a calibration command for LiDAR-to-camera timing offsets.
 5. Containerize the dashboard for repeatable Pi deployment.

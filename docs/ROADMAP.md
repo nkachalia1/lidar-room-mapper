@@ -16,7 +16,7 @@
 
 ## Milestone 3: Robot Autonomy
 
-- Add pose input from wheel odometry, IMU, or visual odometry.
+- Improve pose input with wheel odometry, IMU, or visual odometry.
 - Transform LiDAR scans from robot frame to map frame.
 - Add simple frontier detection for exploration targets.
 

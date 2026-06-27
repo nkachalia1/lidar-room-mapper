@@ -186,6 +186,18 @@ The command writes:
 - `artifacts/first_room.pgm`
 - `artifacts/first_room.yaml`
 
+To inspect whether a moving recording has enough structure for pose-aware mapping:
+
+```bash
+python -m lidar_room_mapper scan-match --source replay --input captures/first_room.jsonl --scans 20
+```
+
+To export using scan-matched poses:
+
+```bash
+python -m lidar_room_mapper export-map --source replay --input captures/first_room.jsonl --output artifacts/first_room_scanmatched --scans 200 --pose-mode scan-match
+```
+
 ## Primary References
 
 - Raspberry Pi Picamera2 manual: https://datasheets.raspberrypi.com/camera/picamera2-manual.pdf
