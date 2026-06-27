@@ -1,0 +1,15 @@
+[Unit]
+Description=Pi LiDAR Room Mapper
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/pi/lidar-room-mapper
+ExecStart=/home/pi/lidar-room-mapper/.venv/bin/python -m lidar_room_mapper serve --source rplidar --port /dev/ttyUSB0 --host 0.0.0.0 --camera
+Restart=on-failure
+RestartSec=5
+User=pi
+
+[Install]
+WantedBy=multi-user.target

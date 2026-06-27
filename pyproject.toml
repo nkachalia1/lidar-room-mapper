@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "lidar-room-mapper"
+version = "0.1.0"
+description = "Raspberry Pi 5 room mapper using RPLIDAR A1M8 and Pi Camera v2"
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [{ name = "Neel" }]
+dependencies = []
+
+[project.optional-dependencies]
+hardware = [
+  "pyserial>=3.5"
+]
+dev = [
+  "pytest>=8.0"
+]
+
+[project.scripts]
+lidar-room-mapper = "lidar_room_mapper.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+lidar_room_mapper = ["dashboard/static/*", "py.typed"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]

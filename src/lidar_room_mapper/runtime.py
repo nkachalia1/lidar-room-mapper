@@ -1,0 +1,103 @@
+from __future__ import annotations
+
+import threading
+import time
+from pathlib import Path
+from typing import Any
+
+from lidar_room_mapper.config import MapConfig, RuntimeConfig
+from lidar_room_mapper.mapping import OccupancyGrid
+from lidar_room_mapper.models import CameraFrame, LidarScan
+from lidar_room_mapper.sensors.camera import NullCamera
+from lidar_room_mapper.sensors.lidar import Scanner
+
+
+class MappingRuntime:
+    """Owns the scanner, camera, mapper, and background integration loop."""
+
+    def __init__(
+        self,
+        scanner: Scanner,
+        camera: Any | None = None,
+        map_config: MapConfig | None = None,
+        runtime_config: RuntimeConfig | None = None,
+    ) -> None:
+        self.scanner = scanner
+        self.camera = camera or NullCamera()
+        self.grid = OccupancyGrid(map_config)
+        self.config = runtime_config or RuntimeConfig()
+        self._lock = threading.Lock()
+        self._thread: threading.Thread | None = None
+        self._stop_event = threading.Event()
+        self._latest_scan: LidarScan | None = None
+        self._latest_frame: CameraFrame | None = None
+        self._error: str | None = None
+        self._started_at: float | None = None
+        Path(self.config.artifact_dir).mkdir(parents=True, exist_ok=True)
+
+    def start(self) -> None:
+        if self._thread and self._thread.is_alive():
+            return
+        self._stop_event.clear()
+        self._started_at = time.time()
+        self._thread = threading.Thread(target=self._run, name="mapping-runtime", daemon=True)
+        self._thread.start()
+
+    def stop(self) -> None:
+        self._stop_event.set()
+        self.scanner.close()
+        self.camera.close()
+        if self._thread and self._thread.is_alive():
+            self._thread.join(timeout=2.0)
+
+    def reset(self) -> None:
+        with self._lock:
+            self.grid.reset()
+            self._latest_scan = None
+            self._latest_frame = None
+            self._error = None
+            self._started_at = time.time()
+
+    def snapshot(self) -> dict[str, object]:
+        with self._lock:
+            payload = self.grid.to_payload()
+            payload["latest_scan"] = {
+                "points": len(self._latest_scan.measurements) if self._latest_scan else 0,
+                "timestamp": self._latest_scan.timestamp if self._latest_scan else None,
+                "source": self._latest_scan.source if self._latest_scan else None,
+            }
+            payload["camera"] = {
+                "path": self._latest_frame.path if self._latest_frame else None,
+                "timestamp": self._latest_frame.timestamp if self._latest_frame else None,
+                "width": self._latest_frame.width if self._latest_frame else None,
+                "height": self._latest_frame.height if self._latest_frame else None,
+            }
+            payload["runtime"] = {
+                "running": self._thread.is_alive() if self._thread else False,
+                "uptime_s": round(time.time() - self._started_at, 2)
+                if self._started_at
+                else 0.0,
+                "error": self._error,
+            }
+            return payload
+
+    def _run(self) -> None:
+        next_camera_capture = 0.0
+        try:
+            for scan in self.scanner.iter_scans():
+                if self._stop_event.is_set():
+                    return
+                frame = None
+                now = time.time()
+                if now >= next_camera_capture:
+                    frame = self.camera.capture()
+                    next_camera_capture = now + self.config.camera_interval_s
+
+                with self._lock:
+                    self.grid.integrate_scan(scan)
+                    self._latest_scan = scan
+                    if frame is not None:
+                        self._latest_frame = frame
+        except Exception as exc:  # pragma: no cover - surfaced in dashboard
+            with self._lock:
+                self._error = str(exc)

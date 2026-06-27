@@ -1,0 +1,137 @@
+from __future__ import annotations
+
+import argparse
+import sys
+from pathlib import Path
+
+from lidar_room_mapper.config import MapConfig, RuntimeConfig
+from lidar_room_mapper.dashboard.server import DashboardServer
+from lidar_room_mapper.mapping import OccupancyGrid
+from lidar_room_mapper.runtime import MappingRuntime
+from lidar_room_mapper.sensors.camera import NullCamera, PiCameraCapture
+from lidar_room_mapper.sensors.lidar import (
+    ReplayScanner,
+    RplidarScanner,
+    SimulatedScanner,
+    scan_to_json,
+)
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = build_parser()
+    args = parser.parse_args(argv)
+    return args.func(args)
+
+
+def build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        prog="lidar-room-mapper",
+        description="Map a room with RPLIDAR A1M8 and a Raspberry Pi camera.",
+    )
+    subparsers = parser.add_subparsers(dest="command", required=True)
+
+    serve = subparsers.add_parser("serve", help="Run the live dashboard")
+    add_source_args(serve)
+    serve.add_argument("--host", default="127.0.0.1")
+    serve.add_argument("--http-port", type=int, default=8000)
+    serve.add_argument("--camera", action="store_true", help="Enable Pi Camera snapshots")
+    serve.set_defaults(func=serve_command)
+
+    record = subparsers.add_parser("record", help="Record scans to JSONL")
+    add_source_args(record)
+    record.add_argument("--output", required=True)
+    record.add_argument("--limit", type=int, default=0, help="Stop after N scans; 0 means forever")
+    record.set_defaults(func=record_command)
+
+    scan_once = subparsers.add_parser("scan-once", help="Integrate one scan and print map stats")
+    add_source_args(scan_once)
+    scan_once.set_defaults(func=scan_once_command)
+
+    return parser
+
+
+def add_source_args(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument(
+        "--source",
+        choices=("sim", "replay", "rplidar"),
+        default="sim",
+        help="LiDAR source",
+    )
+    parser.add_argument("--input", default="data/sample_scan.jsonl", help="Replay JSONL file")
+    parser.add_argument("--port", default="/dev/ttyUSB0", help="RPLIDAR serial port")
+    parser.add_argument("--baud", type=int, default=115200, help="RPLIDAR baud rate")
+
+
+def serve_command(args: argparse.Namespace) -> int:
+    scanner = make_scanner(args)
+    camera = PiCameraCapture() if args.camera else NullCamera()
+    runtime = MappingRuntime(
+        scanner=scanner,
+        camera=camera,
+        map_config=MapConfig(),
+        runtime_config=RuntimeConfig(serial_baud=args.baud),
+    )
+    runtime.start()
+    server = DashboardServer((args.host, args.http_port), runtime)
+    print(f"Dashboard running at http://{args.host}:{args.http_port}")
+    try:
+        server.serve_forever()
+    except KeyboardInterrupt:
+        print("\nStopping dashboard...")
+    finally:
+        runtime.stop()
+        server.server_close()
+    return 0
+
+
+def record_command(args: argparse.Namespace) -> int:
+    scanner = make_scanner(args)
+    output = Path(args.output)
+    output.parent.mkdir(parents=True, exist_ok=True)
+    count = 0
+    try:
+        with output.open("w", encoding="utf-8") as handle:
+            for scan in scanner.iter_scans():
+                handle.write(scan_to_json(scan) + "\n")
+                count += 1
+                print(f"recorded scan {count}: {len(scan.measurements)} points")
+                if args.limit and count >= args.limit:
+                    break
+    finally:
+        scanner.close()
+    return 0
+
+
+def scan_once_command(args: argparse.Namespace) -> int:
+    scanner = make_scanner(args)
+    grid = OccupancyGrid(MapConfig())
+    try:
+        scan = next(iter(scanner.iter_scans()))
+        grid.integrate_scan(scan)
+    finally:
+        scanner.close()
+
+    stats = grid.stats()
+    print(f"source={args.source}")
+    print(f"points={len(scan.measurements)}")
+    print(f"occupied_cells={stats.occupied_cells}")
+    print(f"free_cells={stats.free_cells}")
+    print(f"unknown_cells={stats.unknown_cells}")
+    return 0
+
+
+def make_scanner(args: argparse.Namespace):
+    if args.source == "sim":
+        return SimulatedScanner()
+    if args.source == "replay":
+        replay_path = Path(args.input)
+        if not replay_path.exists():
+            raise SystemExit(f"Replay input not found: {replay_path}")
+        return ReplayScanner(replay_path)
+    if args.source == "rplidar":
+        return RplidarScanner(port=args.port, baudrate=args.baud)
+    raise SystemExit(f"Unsupported source: {args.source}")
+
+
+if __name__ == "__main__":
+    sys.exit(main())

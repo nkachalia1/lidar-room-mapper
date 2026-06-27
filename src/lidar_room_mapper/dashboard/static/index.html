@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Pi LiDAR Room Mapper</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <section class="map-pane" aria-label="Occupancy map">
+        <canvas id="mapCanvas" width="900" height="900"></canvas>
+      </section>
+      <aside class="side-panel" aria-label="Runtime controls and telemetry">
+        <header>
+          <p class="eyebrow">Pi LiDAR Room Mapper</p>
+          <h1>Live Occupancy Map</h1>
+        </header>
+
+        <div class="metrics-grid">
+          <div>
+            <span>Scans</span>
+            <strong id="scans">0</strong>
+          </div>
+          <div>
+            <span>Occupied</span>
+            <strong id="occupied">0</strong>
+          </div>
+          <div>
+            <span>Free</span>
+            <strong id="free">0</strong>
+          </div>
+          <div>
+            <span>Uptime</span>
+            <strong id="uptime">0s</strong>
+          </div>
+        </div>
+
+        <div class="status-line">
+          <span id="source">waiting</span>
+          <span id="points">0 points</span>
+        </div>
+
+        <div class="toolbar">
+          <button id="resetButton" title="Reset map" aria-label="Reset map">Reset</button>
+          <button id="pauseButton" title="Pause display updates" aria-label="Pause display updates">
+            Pause
+          </button>
+        </div>
+
+        <figure class="camera-frame">
+          <img id="cameraImage" alt="Latest Pi Camera frame" />
+          <figcaption id="cameraCaption">Camera disabled</figcaption>
+        </figure>
+
+        <p id="error" class="error" role="status"></p>
+      </aside>
+    </main>
+    <script src="/app.js"></script>
+  </body>
+</html>
