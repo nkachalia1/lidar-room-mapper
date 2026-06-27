@@ -127,3 +127,49 @@ def test_loads_calibration_and_rig_json(tmp_path: Path) -> None:
     assert projector.rig.camera_forward_m == -0.1
     assert projector.rig.lidar_angle_offset_deg == 12.0
     assert projector.rig.status == "test"
+
+
+def test_validated_rig_projects_48_inch_reference_onto_target_stripe() -> None:
+    project_root = Path(__file__).parents[1]
+    projector = LidarCameraProjector.from_json_files(
+        project_root / "config" / "camera_intrinsics_pi_camera_v2_1920x1080.json",
+        project_root / "config" / "rig_geometry.json",
+    )
+    scan = LidarScan(
+        (
+            LidarMeasurement(
+                angle_deg=90.72,
+                distance_mm=1229.0,
+                quality=15,
+            ),
+        )
+    )
+
+    result = projector.project_scan(scan, width=1280, height=720)
+
+    assert len(result.points) == 1
+    assert result.points[0].u == pytest.approx(851.3, abs=0.5)
+    assert result.points[0].v == pytest.approx(297.7, abs=0.5)
+
+
+def test_validated_rig_projects_36_inch_holdout_onto_target_stripe() -> None:
+    project_root = Path(__file__).parents[1]
+    projector = LidarCameraProjector.from_json_files(
+        project_root / "config" / "camera_intrinsics_pi_camera_v2_1920x1080.json",
+        project_root / "config" / "rig_geometry.json",
+    )
+    scan = LidarScan(
+        (
+            LidarMeasurement(
+                angle_deg=90.55,
+                distance_mm=905.0,
+                quality=15,
+            ),
+        )
+    )
+
+    result = projector.project_scan(scan, width=1280, height=720)
+
+    assert len(result.points) == 1
+    assert result.points[0].u == pytest.approx(845.6, abs=0.5)
+    assert result.points[0].v == pytest.approx(357.4, abs=0.5)

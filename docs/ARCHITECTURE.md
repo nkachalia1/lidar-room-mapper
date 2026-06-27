@@ -47,9 +47,11 @@ This is intentionally a first SLAM building block rather than a full loop-closur
 
 When `serve --overlay` is enabled, the runtime projects the LiDAR scan paired
 with each captured camera frame. The projection applies the measured sensor
-translation, provisional angular extrinsics, calibrated camera matrix, and
+translation, two-distance angular calibration, calibrated camera matrix, and
 OpenCV lens-distortion model. Only points in front of the camera and inside the
-image are sent to the dashboard.
+image are sent to the dashboard. The rig metadata keeps hand measurements
+separate from effective fitted values and records the independent 36-inch
+holdout result used to validate the fixed sensor mount.
 
 The API includes the paired scan and frame timestamps, their difference in
 milliseconds, projected points, and filtering counts. Keeping the projection

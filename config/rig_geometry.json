@@ -1,36 +1,65 @@
 {
   "schema_version": 1,
-  "rig_revision": "rig-003-measured",
+  "rig_revision": "rig-006-validated",
   "measurement_date": "2026-06-27",
-  "status": "measured translation; rotation pending sensor-mode recalibration",
+  "status": "validated at 24, 36, and 48 inches",
   "coordinate_convention": {
     "lidar": "+x forward, +y left, +z up",
     "camera": "+x right, +y down, +z forward"
   },
   "lidar": {
     "height_above_ground_m": 0.05715,
-    "angle_offset_deg": 143.0
+    "angle_offset_deg": -100.5
   },
   "lidar_to_camera": {
     "translation_m": {
       "forward": -0.0762,
       "left": -0.00508,
-      "up": 0.12065
+      "up": 0.13525
     },
     "rotation_deg": {
       "yaw": 0.0,
-      "pitch": 0.0,
-      "roll": 0.0
+      "pitch": 8.045,
+      "roll": 1.05
     },
-    "center_to_center_distance_m": 0.14279
+    "center_to_center_distance_m": 0.15526
+  },
+  "measured_lidar_center_to_camera_m": {
+    "forward": -0.0762,
+    "left": -0.00508,
+    "up": 0.12065
   },
   "derived": {
-    "camera_height_above_ground_m": 0.1778
+    "effective_camera_height_above_scan_plane_reference_m": 0.1924
+  },
+  "calibration": {
+    "method": "planar target with stripe at LiDAR scan height",
+    "target_distances_m": [0.6096, 1.2192],
+    "observed_near_target_range_m": [0.604, 0.63],
+    "observed_far_target_range_m": [1.227, 1.237],
+    "complete_scan_count_per_distance": 4,
+    "stripe_annotation": "manual centerline samples in synchronized frames",
+    "near_line_fit_rmse_px": 1.05,
+    "far_line_fit_rmse_px": 1.98,
+    "held_out_validation": {
+      "result": "passed",
+      "target_distance_m": 0.9144,
+      "observed_target_range_m": [0.903, 0.919],
+      "complete_scan_count": 4,
+      "projected_point_count": 56,
+      "line_fit_rmse_px": 0.97,
+      "mean_vertical_residual_px": 0.26
+    }
   },
   "notes": [
-    "The camera is 3.0 inches behind and 4.75 inches above the lidar center.",
+    "The camera is measured 3.0 inches behind and 4.75 inches above the LiDAR housing center.",
     "The 0.2-inch lateral offset is provisionally camera-right, hence negative left.",
     "The camera is locked to the calibrated 1920x1080 10-bit sensor mode.",
-    "Angle offset, pitch, roll, and yaw must be refined with near and held-out target distances."
+    "The camera was physically tilted downward and secured before the rotational fit.",
+    "The effective vertical translation is 5.32 inches from the modeled scan-plane reference to the camera optical center.",
+    "The effective vertical translation is preserved separately from the 4.75-inch housing-center measurement.",
+    "Angle offset, vertical translation, pitch, and roll were jointly fit from four complete scans at both 24 and 48 inches.",
+    "Do not move the camera or LiDAR mount without repeating extrinsic calibration.",
+    "A 36-inch held-out target passed without retuning after the 24- and 48-inch fit."
   ]
 }
