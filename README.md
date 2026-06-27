@@ -8,6 +8,12 @@ The project builds a live 2D occupancy-grid map from LiDAR scans, optionally cap
 - `replay`: recorded JSONL scans for repeatable demos and tests.
 - `rplidar`: live data from the Slamtec RPLIDAR A1M8 over serial.
 
+## Real Hardware Result
+
+This map was exported from a real RPLIDAR A1M8 recording captured on the Raspberry Pi 5.
+
+![First room occupancy map](artifacts/first_room.png)
+
 ## Why This Is Interview-Ready
 
 - Clear sensor abstraction for simulation, replay, and real hardware.
@@ -16,6 +22,14 @@ The project builds a live 2D occupancy-grid map from LiDAR scans, optionally cap
 - Data capture/replay workflow for reproducible debugging.
 - Hardware setup, architecture notes, and interview talking points.
 - Tests around the math and protocol parsing.
+
+## Case Study
+
+The goal was to turn inexpensive robotics hardware into a reliable mapping demo that can be shown live or replayed without the sensors attached. The project uses a Raspberry Pi 5 as the edge computer, a Slamtec RPLIDAR A1M8 as the range sensor, and an optional Pi Camera v2 for synchronized snapshots.
+
+The system is built around small adapters: simulated scans for development, replayed JSONL scans for reproducible demos, and a serial RPLIDAR driver for live capture. Incoming polar measurements are integrated into a log-odds occupancy grid with ray tracing. The dashboard serves the latest map state over HTTP, and `export-map` writes PNG, PGM, and YAML outputs for portfolio screenshots or ROS-style workflows.
+
+The current mapper assumes the LiDAR is stationary at the map origin. That keeps the first milestone honest and explainable: it produces a strong fixed-sensor room map, while leaving pose estimation, scan matching, and camera fusion as clear next engineering steps.
 
 ## Quick Start
 
@@ -89,7 +103,7 @@ See [docs/HARDWARE_SETUP.md](docs/HARDWARE_SETUP.md) for wiring, permissions, an
 python -m lidar_room_mapper record --source rplidar --port /dev/ttyUSB0 --output captures/first_room.jsonl --limit 200
 ```
 
-5. Use that replay file for a reliable interview demo, then add map export as the next engineering milestone.
+5. Use that replay file for a reliable interview demo, export a static map, then add pose estimation as the next engineering milestone.
 
 ## Project Layout
 
