@@ -31,7 +31,7 @@ Then open [http://127.0.0.1:8000](http://127.0.0.1:8000).
 On a Raspberry Pi:
 
 ```bash
-python3 -m venv .venv
+python3 -m venv --system-site-packages .venv
 . .venv/bin/activate
 python -m pip install -e ".[hardware]"
 python -m lidar_room_mapper serve --source rplidar --port /dev/ttyUSB0 --camera

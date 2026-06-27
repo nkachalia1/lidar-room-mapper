@@ -1,4 +1,4 @@
-from lidar_room_mapper.sensors.lidar import parse_standard_scan_packet
+from lidar_room_mapper.sensors.lidar import build_payload_command, parse_standard_scan_packet
 
 
 def make_packet(
@@ -35,3 +35,12 @@ def test_rejects_invalid_start_bits() -> None:
     packet = bytes([0, 1, 0, 0, 0])
 
     assert parse_standard_scan_packet(packet) is None
+
+
+def test_builds_set_pwm_payload_command() -> None:
+    assert build_payload_command(0xF0, bytes([0x94, 0x02])) == bytes(
+        [0xA5, 0xF0, 0x02, 0x94, 0x02, 0xC1]
+    )
+    assert build_payload_command(0xF0, bytes([0x00, 0x00])) == bytes(
+        [0xA5, 0xF0, 0x02, 0x00, 0x00, 0x57]
+    )

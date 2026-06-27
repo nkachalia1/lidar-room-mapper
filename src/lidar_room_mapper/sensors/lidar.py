@@ -119,8 +119,15 @@ class RplidarScanner:
     RESET = 0x40
     STOP = 0x25
     SCAN = 0x20
+    SET_PWM = 0xF0
+    DEFAULT_MOTOR_PWM = 660
 
-    def __init__(self, port: str = "/dev/ttyUSB0", baudrate: int = 115200):
+    def __init__(
+        self,
+        port: str = "/dev/ttyUSB0",
+        baudrate: int = 115200,
+        motor_pwm: int = DEFAULT_MOTOR_PWM,
+    ):
         try:
             import serial
         except ImportError as exc:  # pragma: no cover - exercised on Pi
@@ -130,19 +137,29 @@ class RplidarScanner:
             ) from exc
 
         self._serial = serial.Serial(port, baudrate=baudrate, timeout=2.0)
+        self.motor_pwm = motor_pwm
         self._closed = False
 
     def iter_scans(self) -> Iterable[LidarScan]:
         self._send_command(self.STOP)
         time.sleep(0.05)
+        self.start_motor()
         self._send_command(self.SCAN)
         self._read_descriptor()
 
         measurements: list[LidarMeasurement] = []
+        consecutive_timeouts = 0
         while not self._closed:
             packet = self._serial.read(5)
             if len(packet) != 5:
+                consecutive_timeouts += 1
+                if consecutive_timeouts >= 5:
+                    raise RuntimeError(
+                        "Timed out waiting for RPLIDAR scan packets. Check USB power, "
+                        "the serial port, and whether the sensor is spinning."
+                    )
                 continue
+            consecutive_timeouts = 0
             measurement = parse_standard_scan_packet(packet, time.time())
             if measurement is None:
                 continue
@@ -156,15 +173,33 @@ class RplidarScanner:
         try:
             self._send_command(self.STOP)
         finally:
-            self._serial.close()
+            try:
+                self.stop_motor()
+            finally:
+                self._serial.close()
+
+    def start_motor(self) -> None:
+        self._serial.setDTR(False)
+        self._send_payload_command(self.SET_PWM, _uint16le(self.motor_pwm))
+        time.sleep(1.5)
+
+    def stop_motor(self) -> None:
+        self._send_payload_command(self.SET_PWM, _uint16le(0))
+        self._serial.setDTR(True)
 
     def _send_command(self, command: int) -> None:
         self._serial.write(bytes([self.SYNC_BYTE, command]))
 
+    def _send_payload_command(self, command: int, payload: bytes) -> None:
+        self._serial.write(build_payload_command(command, payload))
+
     def _read_descriptor(self) -> bytes:
         descriptor = self._serial.read(7)
         if len(descriptor) != 7 or descriptor[0] != 0xA5 or descriptor[1] != 0x5A:
-            raise RuntimeError("RPLIDAR did not return a valid scan descriptor.")
+            raise RuntimeError(
+                "RPLIDAR did not return a valid scan descriptor. Check that the "
+                "port is correct, the sensor has enough power, and the motor is spinning."
+            )
         return descriptor
 
 
@@ -223,6 +258,21 @@ def scan_from_json(line: str) -> LidarScan:
         timestamp=float(payload.get("timestamp", time.time())),
         source=str(payload.get("source", "replay")),
     )
+
+
+def build_payload_command(command: int, payload: bytes) -> bytes:
+    if len(payload) > 255:
+        raise ValueError("RPLIDAR payload commands can carry at most 255 bytes.")
+    checksum = RplidarScanner.SYNC_BYTE ^ command ^ len(payload)
+    for byte in payload:
+        checksum ^= byte
+    return bytes([RplidarScanner.SYNC_BYTE, command, len(payload), *payload, checksum])
+
+
+def _uint16le(value: int) -> bytes:
+    if not 0 <= value <= 0xFFFF:
+        raise ValueError("uint16 value out of range")
+    return bytes([value & 0xFF, (value >> 8) & 0xFF])
 
 
 def _angle_delta(a: float, b: float) -> float:

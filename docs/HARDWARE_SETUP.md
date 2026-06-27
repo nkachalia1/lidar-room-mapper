@@ -60,7 +60,18 @@ If you have not pushed it yet, use `scp` from your laptop or create the remote r
 12. Create the Python environment on the Pi:
 
 ```bash
-python3 -m venv .venv
+python3 -m venv --system-site-packages .venv
+. .venv/bin/activate
+python -m pip install --upgrade pip
+python -m pip install -e ".[hardware]"
+```
+
+Use `--system-site-packages` so the venv can import `picamera2`, which Raspberry Pi OS installs through apt. If you already created `.venv` without that flag and camera mode cannot import Picamera2, recreate the venv:
+
+```bash
+deactivate
+rm -rf .venv
+python3 -m venv --system-site-packages .venv
 . .venv/bin/activate
 python -m pip install --upgrade pip
 python -m pip install -e ".[hardware]"
@@ -117,6 +128,8 @@ python -m lidar_room_mapper scan-once --source sim
 python -m lidar_room_mapper scan-once --source rplidar --port /dev/ttyUSB0
 ```
 
+`scan-once` starts the motor, waits for one LiDAR revolution, prints map statistics, then stops the motor as it exits. If you want the motor to keep spinning while you inspect the map, run the dashboard command below.
+
 ## Dashboard
 
 ```bash
@@ -135,6 +148,29 @@ Use this order when something is not working. It isolates failures quickly:
 4. `python -m lidar_room_mapper scan-once --source rplidar --port /dev/ttyUSB0`
 5. `python -m lidar_room_mapper serve --source rplidar --port /dev/ttyUSB0 --host 0.0.0.0 --camera`
 6. Open `http://<pi-ip-address>:8000` from your laptop.
+
+## RPLIDAR Troubleshooting
+
+If the LiDAR stops spinning when a command starts, update to the latest driver and reinstall the package:
+
+```bash
+git pull
+. .venv/bin/activate
+python -m pip install -e ".[hardware]"
+```
+
+Then try again:
+
+```bash
+python -m lidar_room_mapper scan-once --source rplidar --port /dev/ttyUSB0
+```
+
+If it still does not scan:
+
+1. Confirm the USB adapter is seated and the RPLIDAR has enough power.
+2. Confirm the active port with `ls -l /dev/ttyUSB* /dev/ttyACM*`.
+3. Re-run `sudo usermod -aG dialout $USER`, reboot, and SSH back in.
+4. Try the dashboard command; it keeps the scan session open instead of stopping after one revolution.
 
 ## Primary References
 
