@@ -57,6 +57,12 @@ Record live LiDAR scans:
 python -m lidar_room_mapper record --source rplidar --port /dev/ttyUSB0 --output captures/session.jsonl
 ```
 
+Export a replayed map:
+
+```bash
+python -m lidar_room_mapper export-map --source replay --input captures/first_room.jsonl --output artifacts/first_room --scans 200
+```
+
 Print one integrated map summary:
 
 ```bash

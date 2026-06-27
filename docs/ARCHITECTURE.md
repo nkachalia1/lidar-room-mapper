@@ -45,3 +45,13 @@ Hardware demos are fragile in interviews. Replay files give you a deterministic 
 - Save maps as PNG/PGM/YAML for ROS or navigation stacks.
 - Add scan matching for pose estimation.
 - Stream camera frames instead of periodic still captures.
+
+## Map Export
+
+The `export-map` command integrates a bounded number of scans and writes three files:
+
+- `.png`: browser- and README-friendly map image.
+- `.pgm`: ROS-style occupancy grid image.
+- `.yaml`: map metadata with resolution, origin, and occupancy thresholds.
+
+The exported map uses trinary occupancy values: black for occupied cells, white for free cells, and gray for unknown cells.

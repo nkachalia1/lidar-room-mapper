@@ -6,7 +6,7 @@ from pathlib import Path
 
 from lidar_room_mapper.config import MapConfig, RuntimeConfig
 from lidar_room_mapper.dashboard.server import DashboardServer
-from lidar_room_mapper.mapping import OccupancyGrid
+from lidar_room_mapper.mapping import OccupancyGrid, export_grid
 from lidar_room_mapper.runtime import MappingRuntime
 from lidar_room_mapper.sensors.camera import NullCamera, PiCameraCapture
 from lidar_room_mapper.sensors.lidar import (
@@ -46,6 +46,12 @@ def build_parser() -> argparse.ArgumentParser:
     scan_once = subparsers.add_parser("scan-once", help="Integrate one scan and print map stats")
     add_source_args(scan_once)
     scan_once.set_defaults(func=scan_once_command)
+
+    export_map = subparsers.add_parser("export-map", help="Export a map from scans")
+    add_source_args(export_map)
+    export_map.add_argument("--output", default="artifacts/map", help="Output path prefix")
+    export_map.add_argument("--scans", type=int, default=100, help="Number of scans to integrate")
+    export_map.set_defaults(func=export_map_command)
 
     return parser
 
@@ -120,14 +126,48 @@ def scan_once_command(args: argparse.Namespace) -> int:
     return 0
 
 
-def make_scanner(args: argparse.Namespace):
+def export_map_command(args: argparse.Namespace) -> int:
+    if args.scans <= 0:
+        raise SystemExit("--scans must be greater than zero")
+
+    scanner = make_scanner(args, replay_loop=False, replay_scan_hz=1000.0)
+    grid = OccupancyGrid(MapConfig())
+    integrated = 0
+    try:
+        for scan in scanner.iter_scans():
+            grid.integrate_scan(scan)
+            integrated += 1
+            if integrated >= args.scans:
+                break
+    finally:
+        scanner.close()
+
+    if integrated == 0:
+        raise SystemExit("No scans were available to export.")
+
+    paths = export_grid(grid, args.output)
+    stats = grid.stats()
+    print(f"integrated_scans={integrated}")
+    print(f"occupied_cells={stats.occupied_cells}")
+    print(f"free_cells={stats.free_cells}")
+    print(f"png={paths.png}")
+    print(f"pgm={paths.pgm}")
+    print(f"yaml={paths.yaml}")
+    return 0
+
+
+def make_scanner(
+    args: argparse.Namespace,
+    replay_loop: bool = True,
+    replay_scan_hz: float = 4.0,
+):
     if args.source == "sim":
         return SimulatedScanner()
     if args.source == "replay":
         replay_path = Path(args.input)
         if not replay_path.exists():
             raise SystemExit(f"Replay input not found: {replay_path}")
-        return ReplayScanner(replay_path)
+        return ReplayScanner(replay_path, loop=replay_loop, scan_hz=replay_scan_hz)
     if args.source == "rplidar":
         return RplidarScanner(port=args.port, baudrate=args.baud)
     raise SystemExit(f"Unsupported source: {args.source}")

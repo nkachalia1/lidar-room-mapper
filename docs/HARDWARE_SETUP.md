@@ -172,6 +172,20 @@ If it still does not scan:
 3. Re-run `sudo usermod -aG dialout $USER`, reboot, and SSH back in.
 4. Try the dashboard command; it keeps the scan session open instead of stopping after one revolution.
 
+## Export A Recorded Map
+
+After recording `captures/first_room.jsonl`, export a persistent map:
+
+```bash
+python -m lidar_room_mapper export-map --source replay --input captures/first_room.jsonl --output artifacts/first_room --scans 200
+```
+
+The command writes:
+
+- `artifacts/first_room.png`
+- `artifacts/first_room.pgm`
+- `artifacts/first_room.yaml`
+
 ## Primary References
 
 - Raspberry Pi Picamera2 manual: https://datasheets.raspberrypi.com/camera/picamera2-manual.pdf
