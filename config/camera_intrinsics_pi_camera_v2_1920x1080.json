@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "camera": "Raspberry Pi Camera Module 2",
+  "calibration_image_size": {
+    "width": 1920,
+    "height": 1080
+  },
+  "checkerboard": {
+    "inner_corners": {
+      "cols": 7,
+      "rows": 7
+    },
+    "square_size_m": 0.0301625
+  },
+  "rms_reprojection_error_px": 0.3725041912,
+  "camera_matrix": {
+    "rows": 3,
+    "cols": 3,
+    "data": [
+      2626.621198,
+      0.0,
+      864.0909643,
+      0.0,
+      2619.644683,
+      533.5666116,
+      0.0,
+      0.0,
+      1.0
+    ]
+  },
+  "distortion_coefficients": {
+    "model": "opencv_plumb_bob",
+    "data": [
+      0.04778594505,
+      1.696891898,
+      -0.01610473299,
+      -0.01806610254,
+      -7.241881095
+    ]
+  },
+  "used_image_count": 16,
+  "notes": [
+    "Calibrated from Pi Camera v2 still images captured at 1920x1080.",
+    "Scale intrinsics only to resolutions with the same 16:9 sensor crop."
+  ]
+}

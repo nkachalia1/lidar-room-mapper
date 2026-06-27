@@ -2,10 +2,12 @@ from __future__ import annotations
 
 import argparse
 import sys
+from dataclasses import replace
 from pathlib import Path
 
 from lidar_room_mapper.config import MapConfig, RuntimeConfig
 from lidar_room_mapper.dashboard.server import DashboardServer
+from lidar_room_mapper.fusion import LidarCameraProjector
 from lidar_room_mapper.mapping import OccupancyGrid, ScanMatcher, export_grid
 from lidar_room_mapper.models import LidarScan, Pose2D
 from lidar_room_mapper.runtime import MappingRuntime
@@ -46,6 +48,28 @@ def build_parser() -> argparse.ArgumentParser:
         default="",
         help="Camera frame manifest JSONL to synchronize with replayed scans",
     )
+    serve.add_argument(
+        "--overlay",
+        action="store_true",
+        help="Project the paired LiDAR scan over each camera frame",
+    )
+    serve.add_argument(
+        "--camera-intrinsics",
+        default="config/camera_intrinsics_pi_camera_v2_1920x1080.json",
+        help="Camera intrinsics JSON used by --overlay",
+    )
+    serve.add_argument(
+        "--rig-config",
+        default="config/rig_geometry.json",
+        help="LiDAR-to-camera geometry JSON used by --overlay",
+    )
+    serve.add_argument("--camera-forward-m", type=float, default=None)
+    serve.add_argument("--camera-left-m", type=float, default=None)
+    serve.add_argument("--camera-up-m", type=float, default=None)
+    serve.add_argument("--camera-yaw-deg", type=float, default=None)
+    serve.add_argument("--camera-pitch-deg", type=float, default=None)
+    serve.add_argument("--camera-roll-deg", type=float, default=None)
+    serve.add_argument("--lidar-angle-offset-deg", type=float, default=None)
     serve.set_defaults(func=serve_command)
 
     record = subparsers.add_parser("record", help="Record scans to JSONL")
@@ -102,9 +126,11 @@ def add_source_args(parser: argparse.ArgumentParser) -> None:
 def serve_command(args: argparse.Namespace) -> int:
     scanner = make_scanner(args)
     camera = make_dashboard_camera(args)
+    projector = make_dashboard_projector(args)
     runtime = MappingRuntime(
         scanner=scanner,
         camera=camera,
+        projector=projector,
         map_config=MapConfig(),
         runtime_config=RuntimeConfig(serial_baud=args.baud),
     )
@@ -132,6 +158,45 @@ def make_dashboard_camera(args: argparse.Namespace):
             print(f"Using replay camera frames from {manifest_path}")
             return ReplayCameraFrames(manifest_path)
     return NullCamera()
+
+
+def make_dashboard_projector(args: argparse.Namespace) -> LidarCameraProjector | None:
+    if not args.overlay:
+        return None
+    try:
+        projector = LidarCameraProjector.from_json_files(
+            args.camera_intrinsics,
+            args.rig_config,
+        )
+    except (OSError, ValueError) as exc:
+        raise SystemExit(f"Unable to load LiDAR-camera calibration: {exc}") from exc
+
+    override_names = {
+        "camera_forward_m": args.camera_forward_m,
+        "camera_left_m": args.camera_left_m,
+        "camera_up_m": args.camera_up_m,
+        "camera_yaw_deg": args.camera_yaw_deg,
+        "camera_pitch_deg": args.camera_pitch_deg,
+        "camera_roll_deg": args.camera_roll_deg,
+        "lidar_angle_offset_deg": args.lidar_angle_offset_deg,
+    }
+    overrides = {name: value for name, value in override_names.items() if value is not None}
+    if overrides:
+        projector = LidarCameraProjector(
+            intrinsics=projector.intrinsics,
+            rig=replace(projector.rig, **overrides),
+        )
+
+    rig = projector.rig
+    print(
+        "LiDAR-camera overlay enabled: "
+        f"translation=({rig.camera_forward_m:.5f}, {rig.camera_left_m:.5f}, "
+        f"{rig.camera_up_m:.5f})m "
+        f"yaw/pitch/roll=({rig.camera_yaw_deg:.1f}, {rig.camera_pitch_deg:.1f}, "
+        f"{rig.camera_roll_deg:.1f})deg "
+        f"lidar_offset={rig.lidar_angle_offset_deg:.1f}deg"
+    )
+    return projector
 
 
 def default_frame_manifest_path(replay_path: Path) -> Path:

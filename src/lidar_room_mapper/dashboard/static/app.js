@@ -7,12 +7,18 @@ const uptime = document.getElementById("uptime");
 const source = document.getElementById("source");
 const points = document.getElementById("points");
 const error = document.getElementById("error");
+const cameraViewport = document.getElementById("cameraViewport");
 const cameraImage = document.getElementById("cameraImage");
+const cameraOverlay = document.getElementById("cameraOverlay");
+const cameraOverlayContext = cameraOverlay.getContext("2d");
 const cameraCaption = document.getElementById("cameraCaption");
+const overlayToggle = document.getElementById("overlayToggle");
 const resetButton = document.getElementById("resetButton");
 const pauseButton = document.getElementById("pauseButton");
 
 let paused = false;
+let lastCameraTimestamp = null;
+let latestState = null;
 
 resetButton.addEventListener("click", async () => {
   await fetch("/api/reset");
@@ -23,11 +29,18 @@ pauseButton.addEventListener("click", () => {
   pauseButton.textContent = paused ? "Resume" : "Pause";
 });
 
+overlayToggle.addEventListener("change", () => {
+  if (latestState) {
+    updateCamera(latestState);
+  }
+});
+
 async function tick() {
   if (!paused) {
     try {
       const response = await fetch("/api/state");
       const state = await response.json();
+      latestState = state;
       updateMetrics(state);
       drawMap(state);
       updateCamera(state);
@@ -102,13 +115,76 @@ function drawRobot() {
 
 function updateCamera(state) {
   const camera = state.camera || {};
+  const fusion = state.fusion || {};
   if (!camera.path) {
+    cameraViewport.hidden = true;
+    cameraImage.removeAttribute("src");
+    clearCameraOverlay();
+    lastCameraTimestamp = null;
+    overlayToggle.disabled = true;
     cameraCaption.textContent = "Camera disabled";
     return;
   }
-  cameraImage.src = `/api/latest.jpg?t=${Date.now()}`;
+
+  cameraViewport.hidden = false;
+  overlayToggle.disabled = !fusion.enabled;
+  if (camera.timestamp !== lastCameraTimestamp) {
+    cameraImage.src = `/api/latest.jpg?t=${camera.timestamp || Date.now()}`;
+    lastCameraTimestamp = camera.timestamp;
+  }
+
+  drawCameraOverlay(camera, fusion);
   const captured = camera.timestamp ? new Date(camera.timestamp * 1000).toLocaleTimeString() : "";
-  cameraCaption.textContent = captured ? `Latest frame ${captured}` : "Latest frame";
+  const details = [captured || "Latest frame"];
+  if (fusion.enabled) {
+    details.push(`${fusion.projected_count || 0} pts`);
+    if (Number.isFinite(fusion.sync_delta_ms)) {
+      const sign = fusion.sync_delta_ms > 0 ? "+" : "";
+      details.push(`sync ${sign}${fusion.sync_delta_ms.toFixed(1)} ms`);
+    }
+  }
+  cameraCaption.textContent = details.join(" | ");
+}
+
+function drawCameraOverlay(camera, fusion) {
+  const width = camera.width || 1;
+  const height = camera.height || 1;
+  if (cameraOverlay.width !== width || cameraOverlay.height !== height) {
+    cameraOverlay.width = width;
+    cameraOverlay.height = height;
+  }
+  clearCameraOverlay();
+  if (!fusion.enabled || !overlayToggle.checked) {
+    return;
+  }
+
+  const baseRadius = Math.max(5, width / 180);
+  for (const point of fusion.points || []) {
+    cameraOverlayContext.beginPath();
+    cameraOverlayContext.arc(
+      point.u,
+      point.v,
+      point.quality > 20 ? baseRadius : baseRadius * 0.75,
+      0,
+      Math.PI * 2,
+    );
+    cameraOverlayContext.fillStyle = lidarPointColor(point.distance_m);
+    cameraOverlayContext.fill();
+    cameraOverlayContext.strokeStyle = "rgba(4, 8, 15, 0.85)";
+    cameraOverlayContext.lineWidth = Math.max(2, width / 960);
+    cameraOverlayContext.stroke();
+  }
+}
+
+function clearCameraOverlay() {
+  cameraOverlayContext.clearRect(0, 0, cameraOverlay.width, cameraOverlay.height);
+}
+
+function lidarPointColor(distanceM) {
+  if (distanceM < 1) return "#fb7185";
+  if (distanceM < 2) return "#facc15";
+  if (distanceM < 4) return "#38bdf8";
+  return "#a78bfa";
 }
 
 tick();

@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "rig_revision": "rig-003-measured",
+  "measurement_date": "2026-06-27",
+  "status": "measured translation; provisional rotation",
+  "coordinate_convention": {
+    "lidar": "+x forward, +y left, +z up",
+    "camera": "+x right, +y down, +z forward"
+  },
+  "lidar": {
+    "height_above_ground_m": 0.05715,
+    "angle_offset_deg": 143.0
+  },
+  "lidar_to_camera": {
+    "translation_m": {
+      "forward": -0.0762,
+      "left": -0.00508,
+      "up": 0.12065
+    },
+    "rotation_deg": {
+      "yaw": 0.0,
+      "pitch": 8.0,
+      "roll": 6.0
+    },
+    "center_to_center_distance_m": 0.14279
+  },
+  "derived": {
+    "camera_height_above_ground_m": 0.1778
+  },
+  "notes": [
+    "The camera is 3.0 inches behind and 4.75 inches above the lidar center.",
+    "The 0.2-inch lateral offset is provisionally camera-right, hence negative left.",
+    "Angle offset, pitch, roll, and yaw must be refined with a single-plane target."
+  ]
+}

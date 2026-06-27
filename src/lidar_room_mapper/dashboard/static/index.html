@@ -49,8 +49,17 @@
         </div>
 
         <figure class="camera-frame">
-          <img id="cameraImage" alt="Latest Pi Camera frame" />
-          <figcaption id="cameraCaption">Camera disabled</figcaption>
+          <div id="cameraViewport" class="camera-viewport" hidden>
+            <img id="cameraImage" alt="Latest Pi Camera frame" />
+            <canvas id="cameraOverlay" aria-hidden="true"></canvas>
+          </div>
+          <div class="camera-meta">
+            <figcaption id="cameraCaption">Camera disabled</figcaption>
+            <label class="overlay-control">
+              <input id="overlayToggle" type="checkbox" checked disabled />
+              <span>LiDAR overlay</span>
+            </label>
+          </div>
         </figure>
 
         <p id="error" class="error" role="status"></p>

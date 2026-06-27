@@ -2,7 +2,7 @@
 
 An interview-ready robotics project for a Raspberry Pi 5, Raspberry Pi Camera Module v2, and Slamtec RPLIDAR A1M8.
 
-The project builds a live 2D occupancy-grid map from LiDAR scans, optionally captures synchronized camera snapshots, and serves a browser dashboard for demos. It is designed to work in three modes:
+The project builds a live 2D occupancy-grid map from LiDAR scans, optionally captures synchronized camera snapshots, projects calibrated LiDAR returns over the camera image, and serves a browser dashboard for demos. It is designed to work in three modes:
 
 - `sim`: deterministic synthetic scans for development without hardware.
 - `replay`: recorded JSONL scans for repeatable demos and tests.
@@ -20,6 +20,7 @@ This map was exported from a real RPLIDAR A1M8 recording captured on the Raspber
 - Occupancy-grid mapping with ray tracing and log-odds updates.
 - Live dashboard that can run directly on the Pi.
 - Data capture/replay workflow for reproducible debugging.
+- Calibrated camera-LiDAR projection with visible synchronization diagnostics.
 - Hardware setup, architecture notes, and interview talking points.
 - Tests around the math and protocol parsing.
 
@@ -51,6 +52,12 @@ python -m pip install -e ".[hardware]"
 python -m lidar_room_mapper serve --source rplidar --port /dev/ttyUSB0 --camera
 ```
 
+Add `--overlay` to draw the scan paired with each camera frame:
+
+```bash
+python -m lidar_room_mapper serve --source rplidar --port /dev/ttyUSB0 --camera --overlay --host 0.0.0.0
+```
+
 ## Common Commands
 
 Run the dashboard with simulated scans:
@@ -70,6 +77,8 @@ Replay LiDAR with synchronized camera stills:
 ```bash
 python -m lidar_room_mapper serve --source replay --input captures/session.jsonl --frames captures/session_frames.jsonl --host 0.0.0.0
 ```
+
+Add `--overlay` to this replay command to inspect the same calibrated projection without hardware.
 
 Record live LiDAR scans:
 
@@ -111,6 +120,7 @@ python -m lidar_room_mapper scan-once --source sim
 - USB power that can comfortably supply the Pi 5 and peripherals
 
 See [docs/HARDWARE_SETUP.md](docs/HARDWARE_SETUP.md) for wiring, permissions, and first-run checks.
+See [docs/LIDAR_CAMERA_CALIBRATION.md](docs/LIDAR_CAMERA_CALIBRATION.md) for the measured rig transform, live overlay, and rotation-tuning procedure.
 
 ## Recommended Next Steps
 

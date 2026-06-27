@@ -43,6 +43,19 @@ The `scan-match` command estimates relative motion between consecutive LiDAR sca
 
 This is intentionally a first SLAM building block rather than a full loop-closure system. It gives the project a clean place to add better scan matching, odometry, or camera-based pose priors later.
 
+## LiDAR-Camera Projection
+
+When `serve --overlay` is enabled, the runtime projects the LiDAR scan paired
+with each captured camera frame. The projection applies the measured sensor
+translation, provisional angular extrinsics, calibrated camera matrix, and
+OpenCV lens-distortion model. Only points in front of the camera and inside the
+image are sent to the dashboard.
+
+The API includes the paired scan and frame timestamps, their difference in
+milliseconds, projected points, and filtering counts. Keeping the projection
+paired with the captured frame prevents newer scans from being drawn over an
+older image while the rig is moving.
+
 ## Why Replay Exists
 
 Hardware demos are fragile in interviews. Replay files give you a deterministic path:
