@@ -30,7 +30,9 @@ class PiCameraCapture:
         except ImportError as exc:  # pragma: no cover - exercised on Pi
             raise RuntimeError(
                 "Picamera2 is not importable. On Raspberry Pi OS install it with "
-                "sudo apt install -y python3-picamera2"
+                "sudo apt install -y python3-picamera2, then recreate the venv with "
+                "python3 -m venv --system-site-packages .venv so apt-installed "
+                "camera packages are visible."
             ) from exc
 
         self.output_dir = Path(output_dir)
