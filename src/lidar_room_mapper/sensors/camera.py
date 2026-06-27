@@ -94,6 +94,8 @@ class PiCameraCapture:
         output_dir: str | Path = "artifacts",
         resolution: tuple[int, int] = (1280, 720),
         filename: str = "latest.jpg",
+        sensor_mode: tuple[int, int] | None = (1920, 1080),
+        sensor_bit_depth: int = 10,
     ):
         try:
             from picamera2 import Picamera2
@@ -110,9 +112,15 @@ class PiCameraCapture:
         self.filename = filename
         self.width, self.height = resolution
         self._camera = Picamera2()
-        config = self._camera.create_still_configuration(
-            main={"size": (self.width, self.height)}
-        )
+        configuration: dict[str, object] = {
+            "main": {"size": (self.width, self.height)}
+        }
+        if sensor_mode is not None:
+            configuration["sensor"] = {
+                "output_size": sensor_mode,
+                "bit_depth": sensor_bit_depth,
+            }
+        config = self._camera.create_still_configuration(**configuration)
         self._camera.configure(config)
         self._camera.start()
 

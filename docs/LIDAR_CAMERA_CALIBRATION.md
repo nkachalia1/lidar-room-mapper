@@ -10,6 +10,11 @@ Camera intrinsics are stored in
 from 16 accepted checkerboard views at 1920x1080 with an RMS reprojection error
 of 0.373 pixels.
 
+Live capture explicitly selects the Pi Camera v2 `1920x1080`, 10-bit sensor
+mode. The dashboard image may be scaled to 1280x720, but the sensor crop remains
+the same as the checkerboard calibration. Do not remove the explicit sensor
+mode and assume that equal 16:9 aspect ratios imply equal camera intrinsics.
+
 The measured rig geometry is stored in `config/rig_geometry.json`:
 
 - camera is 3.0 inches behind the LiDAR center: `forward=-0.0762 m`;
@@ -19,7 +24,8 @@ The measured rig geometry is stored in `config/rig_geometry.json`:
 - camera optical center is therefore about 7.0 inches above the floor.
 
 The translation is measured. The LiDAR angle offset and camera yaw, pitch, and
-roll remain provisional until the single-plane target test passes.
+roll remain provisional until the single-plane target passes at both a tuning
+distance and a held-out distance.
 
 ## Run the Live Overlay
 

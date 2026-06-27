@@ -1,8 +1,14 @@
 import json
+import sys
 from pathlib import Path
+from types import SimpleNamespace
 
 from lidar_room_mapper.models import CameraFrame
-from lidar_room_mapper.sensors.camera import ReplayCameraFrames, TimestampedCameraRecorder
+from lidar_room_mapper.sensors.camera import (
+    PiCameraCapture,
+    ReplayCameraFrames,
+    TimestampedCameraRecorder,
+)
 
 
 class FakeCamera:
@@ -81,3 +87,45 @@ def test_replay_camera_frames_returns_nearest_frame(tmp_path: Path) -> None:
     assert selected is not None
     assert Path(selected.path) == frame2
     assert selected.timestamp == 20.0
+
+
+def test_pi_camera_uses_calibrated_sensor_mode(monkeypatch, tmp_path: Path) -> None:
+    class FakePicamera2:
+        latest: "FakePicamera2 | None" = None
+
+        def __init__(self) -> None:
+            self.configuration: dict[str, object] | None = None
+            self.started = False
+            self.stopped = False
+            FakePicamera2.latest = self
+
+        def create_still_configuration(self, **configuration):
+            self.configuration = configuration
+            return configuration
+
+        def configure(self, configuration) -> None:
+            assert configuration == self.configuration
+
+        def start(self) -> None:
+            self.started = True
+
+        def stop(self) -> None:
+            self.stopped = True
+
+    monkeypatch.setitem(
+        sys.modules,
+        "picamera2",
+        SimpleNamespace(Picamera2=FakePicamera2),
+    )
+
+    camera = PiCameraCapture(output_dir=tmp_path)
+    fake = FakePicamera2.latest
+
+    assert fake is not None
+    assert fake.configuration == {
+        "main": {"size": (1280, 720)},
+        "sensor": {"output_size": (1920, 1080), "bit_depth": 10},
+    }
+    assert fake.started is True
+    camera.close()
+    assert fake.stopped is True
