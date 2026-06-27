@@ -12,6 +12,7 @@ from lidar_room_mapper.runtime import MappingRuntime
 from lidar_room_mapper.sensors.camera import (
     NullCamera,
     PiCameraCapture,
+    ReplayCameraFrames,
     TimestampedCameraRecorder,
 )
 from lidar_room_mapper.sensors.lidar import (
@@ -40,6 +41,11 @@ def build_parser() -> argparse.ArgumentParser:
     serve.add_argument("--host", default="127.0.0.1")
     serve.add_argument("--http-port", type=int, default=8000)
     serve.add_argument("--camera", action="store_true", help="Enable Pi Camera snapshots")
+    serve.add_argument(
+        "--frames",
+        default="",
+        help="Camera frame manifest JSONL to synchronize with replayed scans",
+    )
     serve.set_defaults(func=serve_command)
 
     record = subparsers.add_parser("record", help="Record scans to JSONL")
@@ -95,7 +101,7 @@ def add_source_args(parser: argparse.ArgumentParser) -> None:
 
 def serve_command(args: argparse.Namespace) -> int:
     scanner = make_scanner(args)
-    camera = PiCameraCapture() if args.camera else NullCamera()
+    camera = make_dashboard_camera(args)
     runtime = MappingRuntime(
         scanner=scanner,
         camera=camera,
@@ -113,6 +119,23 @@ def serve_command(args: argparse.Namespace) -> int:
         runtime.stop()
         server.server_close()
     return 0
+
+
+def make_dashboard_camera(args: argparse.Namespace):
+    if args.frames:
+        return ReplayCameraFrames(args.frames)
+    if args.camera:
+        return PiCameraCapture()
+    if args.source == "replay":
+        manifest_path = default_frame_manifest_path(Path(args.input))
+        if manifest_path.exists():
+            print(f"Using replay camera frames from {manifest_path}")
+            return ReplayCameraFrames(manifest_path)
+    return NullCamera()
+
+
+def default_frame_manifest_path(replay_path: Path) -> Path:
+    return replay_path.with_name(f"{replay_path.stem}_frames.jsonl")
 
 
 def record_command(args: argparse.Namespace) -> int:

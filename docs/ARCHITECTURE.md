@@ -19,7 +19,7 @@ The system is intentionally layered:
 - `dashboard` serves a local browser UI with no frontend build step.
 - `cli` wires everything into demo, recording, and validation workflows.
 
-Camera support is intentionally split into two modes: the live dashboard keeps a rolling `latest.jpg` preview, while `record --camera` writes timestamped numbered frames and a JSONL frame manifest for later synchronization work.
+Camera support is intentionally split into three modes: the live dashboard keeps a rolling `latest.jpg` preview, `record --camera` writes timestamped numbered frames and a JSONL frame manifest, and replay mode can synchronize those frames back to LiDAR scan timestamps.
 
 ## Mapping Model
 
@@ -55,7 +55,7 @@ Hardware demos are fragile in interviews. Replay files give you a deterministic 
 ## Extension Points
 
 - Add robot motion and transform scans into a shared map frame.
-- Fuse camera frames with LiDAR timestamps.
+- Use synchronized camera frames for visual odometry or semantic map labels.
 - Save maps as PNG/PGM/YAML for ROS or navigation stacks.
 - Add scan matching for pose estimation.
 - Stream camera frames instead of periodic still captures.

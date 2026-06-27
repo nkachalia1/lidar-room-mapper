@@ -1,7 +1,8 @@
+import json
 from pathlib import Path
 
 from lidar_room_mapper.models import CameraFrame
-from lidar_room_mapper.sensors.camera import TimestampedCameraRecorder
+from lidar_room_mapper.sensors.camera import ReplayCameraFrames, TimestampedCameraRecorder
 
 
 class FakeCamera:
@@ -43,3 +44,40 @@ def test_timestamped_camera_recorder_writes_frames_and_manifest(tmp_path: Path) 
     assert len(manifest) == 2
     assert "frame_000001.jpg" in manifest[0]
     assert "frame_000002.jpg" in manifest[1]
+
+
+def test_replay_camera_frames_returns_nearest_frame(tmp_path: Path) -> None:
+    captures = tmp_path / "captures"
+    frame_dir = captures / "session_frames"
+    frame_dir.mkdir(parents=True)
+    frame1 = frame_dir / "frame_000001.jpg"
+    frame2 = frame_dir / "frame_000002.jpg"
+    frame1.write_bytes(b"first")
+    frame2.write_bytes(b"second")
+
+    manifest = captures / "session_frames.jsonl"
+    records = [
+        {
+            "path": str(Path("captures") / "session_frames" / "frame_000001.jpg"),
+            "timestamp": 10.0,
+            "width": 640,
+            "height": 480,
+        },
+        {
+            "path": str(Path("captures") / "session_frames" / "frame_000002.jpg"),
+            "timestamp": 20.0,
+            "width": 640,
+            "height": 480,
+        },
+    ]
+    manifest.write_text(
+        "\n".join(json.dumps(record) for record in records) + "\n",
+        encoding="utf-8",
+    )
+
+    camera = ReplayCameraFrames(manifest)
+    selected = camera.capture_near(18.0)
+
+    assert selected is not None
+    assert Path(selected.path) == frame2
+    assert selected.timestamp == 20.0

@@ -29,7 +29,7 @@ The goal was to turn inexpensive robotics hardware into a reliable mapping demo 
 
 The system is built around small adapters: simulated scans for development, replayed JSONL scans for reproducible demos, and a serial RPLIDAR driver for live capture. Incoming polar measurements are integrated into a log-odds occupancy grid with ray tracing. The dashboard serves the latest map state over HTTP, `scan-match` estimates relative motion between consecutive scans, and `export-map` writes PNG, PGM, and YAML outputs for portfolio screenshots or ROS-style workflows.
 
-The default mapper assumes the LiDAR is stationary at the map origin, and pose-aware export is available as an opt-in scan-matching mode. That keeps the live demo stable while creating a clear path toward full SLAM with pose estimation, scan matching, and camera fusion.
+The default mapper assumes the LiDAR is stationary at the map origin, and pose-aware export is available as an opt-in scan-matching mode. Camera frames are timestamped during recording and can be replayed in the dashboard beside the matching LiDAR scan. That keeps the live demo stable while creating a clear path toward full SLAM with pose estimation, scan matching, and sensor fusion.
 
 ## Quick Start
 
@@ -63,6 +63,12 @@ Run from a replay file:
 
 ```bash
 python -m lidar_room_mapper serve --source replay --input data/sample_scan.jsonl
+```
+
+Replay LiDAR with synchronized camera stills:
+
+```bash
+python -m lidar_room_mapper serve --source replay --input captures/session.jsonl --frames captures/session_frames.jsonl --host 0.0.0.0
 ```
 
 Record live LiDAR scans:

@@ -162,6 +162,14 @@ This writes:
 - `captures/first_room_camera_frames/`: numbered JPEG frames.
 - `captures/first_room_camera_frames.jsonl`: frame metadata with timestamps, paths, width, and height.
 
+Replay the synchronized capture in the dashboard:
+
+```bash
+python -m lidar_room_mapper serve --source replay --input captures/first_room_camera.jsonl --frames captures/first_room_camera_frames.jsonl --host 0.0.0.0
+```
+
+If the frame manifest is named with the default `*_frames.jsonl` pattern, replay mode auto-detects it when you omit `--frames`.
+
 ## Bring-Up Order
 
 Use this order when something is not working. It isolates failures quickly:

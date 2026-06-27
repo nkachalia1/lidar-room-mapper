@@ -89,7 +89,10 @@ class MappingRuntime:
                     return
                 frame = None
                 now = time.time()
-                if now >= next_camera_capture:
+                capture_near = getattr(self.camera, "capture_near", None)
+                if callable(capture_near):
+                    frame = capture_near(scan.timestamp)
+                elif now >= next_camera_capture:
                     frame = self.camera.capture()
                     next_camera_capture = now + self.config.camera_interval_s
 
