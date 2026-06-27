@@ -10,6 +10,7 @@ I built a Raspberry Pi robotics mapping stack that turns a low-cost RPLIDAR and 
 - Replay/simulator modes for deterministic development.
 - Occupancy-grid mapping with ray tracing and log-odds confidence updates.
 - First-pass correlative scan matching for relative pose estimates.
+- Timestamped camera still recording alongside LiDAR replay files.
 - Runtime state isolation with a thread-safe snapshot API.
 - No frontend build step, which keeps Pi deployment simple.
 - Tests for parsing, replay, and map integration.

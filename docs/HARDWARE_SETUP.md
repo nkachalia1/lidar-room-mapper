@@ -100,6 +100,16 @@ sudo apt update
 sudo apt install -y python3-picamera2
 ```
 
+5. If the project venv cannot import Picamera2, recreate it with system packages:
+
+```bash
+deactivate
+rm -rf .venv
+python3 -m venv --system-site-packages .venv
+. .venv/bin/activate
+python -m pip install -e ".[hardware]"
+```
+
 ## RPLIDAR
 
 1. Connect the RPLIDAR A1M8 USB adapter to the Pi.
@@ -137,6 +147,20 @@ python -m lidar_room_mapper serve --source rplidar --port /dev/ttyUSB0 --host 0.
 ```
 
 Open `http://<pi-ip-address>:8000` from a laptop on the same network.
+
+## LiDAR And Camera Recording
+
+Record LiDAR scans with timestamped camera stills:
+
+```bash
+python -m lidar_room_mapper record --source rplidar --port /dev/ttyUSB0 --output captures/first_room_camera.jsonl --limit 200 --camera --camera-every 10
+```
+
+This writes:
+
+- `captures/first_room_camera.jsonl`: LiDAR scans.
+- `captures/first_room_camera_frames/`: numbered JPEG frames.
+- `captures/first_room_camera_frames.jsonl`: frame metadata with timestamps, paths, width, and height.
 
 ## Bring-Up Order
 

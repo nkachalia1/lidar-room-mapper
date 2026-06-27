@@ -9,7 +9,11 @@ from lidar_room_mapper.dashboard.server import DashboardServer
 from lidar_room_mapper.mapping import OccupancyGrid, ScanMatcher, export_grid
 from lidar_room_mapper.models import LidarScan, Pose2D
 from lidar_room_mapper.runtime import MappingRuntime
-from lidar_room_mapper.sensors.camera import NullCamera, PiCameraCapture
+from lidar_room_mapper.sensors.camera import (
+    NullCamera,
+    PiCameraCapture,
+    TimestampedCameraRecorder,
+)
 from lidar_room_mapper.sensors.lidar import (
     ReplayScanner,
     RplidarScanner,
@@ -42,6 +46,13 @@ def build_parser() -> argparse.ArgumentParser:
     add_source_args(record)
     record.add_argument("--output", required=True)
     record.add_argument("--limit", type=int, default=0, help="Stop after N scans; 0 means forever")
+    record.add_argument("--camera", action="store_true", help="Capture camera frames while recording")
+    record.add_argument(
+        "--camera-every",
+        type=int,
+        default=10,
+        help="Capture one camera frame every N scans when --camera is enabled",
+    )
     record.set_defaults(func=record_command)
 
     scan_once = subparsers.add_parser("scan-once", help="Integrate one scan and print map stats")
@@ -105,21 +116,39 @@ def serve_command(args: argparse.Namespace) -> int:
 
 
 def record_command(args: argparse.Namespace) -> int:
+    if args.camera_every <= 0:
+        raise SystemExit("--camera-every must be greater than zero")
+
     scanner = make_scanner(args)
     output = Path(args.output)
     output.parent.mkdir(parents=True, exist_ok=True)
+    camera = make_recording_camera(output) if args.camera else NullCamera()
     count = 0
     try:
         with output.open("w", encoding="utf-8") as handle:
             for scan in scanner.iter_scans():
                 handle.write(scan_to_json(scan) + "\n")
                 count += 1
-                print(f"recorded scan {count}: {len(scan.measurements)} points")
+                frame = None
+                if args.camera and (count - 1) % args.camera_every == 0:
+                    frame = camera.capture()
+                suffix = f", frame={frame.path}" if frame is not None else ""
+                print(f"recorded scan {count}: {len(scan.measurements)} points{suffix}")
                 if args.limit and count >= args.limit:
                     break
     finally:
         scanner.close()
+        camera.close()
     return 0
+
+
+def make_recording_camera(output: Path) -> TimestampedCameraRecorder:
+    frame_dir = output.with_suffix("").parent / f"{output.with_suffix('').name}_frames"
+    manifest_path = output.with_suffix("").parent / f"{output.with_suffix('').name}_frames.jsonl"
+    return TimestampedCameraRecorder(
+        PiCameraCapture(output_dir=frame_dir),
+        manifest_path=manifest_path,
+    )
 
 
 def scan_once_command(args: argparse.Namespace) -> int:

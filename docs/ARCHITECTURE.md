@@ -19,6 +19,8 @@ The system is intentionally layered:
 - `dashboard` serves a local browser UI with no frontend build step.
 - `cli` wires everything into demo, recording, and validation workflows.
 
+Camera support is intentionally split into two modes: the live dashboard keeps a rolling `latest.jpg` preview, while `record --camera` writes timestamped numbered frames and a JSONL frame manifest for later synchronization work.
+
 ## Mapping Model
 
 The default live mapper assumes the robot is stationary at the center of the map. Each LiDAR measurement is ray traced with Bresenham cells:
