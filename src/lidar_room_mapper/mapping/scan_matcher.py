@@ -17,6 +17,8 @@ class ScanMatchConfig:
     score_grid_m: float = 0.1
     unmatched_penalty: float = 1.0
     max_accepted_score: float = 0.05
+    min_score_improvement: float = 0.0001
+    min_score_improvement_ratio: float = 0.25
 
 
 @dataclass(frozen=True)
@@ -61,8 +63,15 @@ class ScanMatcher:
 
         initial = initial or Pose2D()
         reference_index = build_spatial_index(reference_points, self.config.score_grid_m)
+        initial_score = score_alignment_indexed(
+            reference_index,
+            current_points,
+            initial,
+            self.config.score_grid_m,
+            self.config.unmatched_penalty,
+        )
         best_pose = initial
-        best_score = float("inf")
+        best_score = initial_score
         for dtheta in _frange(
             -self.config.angular_search_deg,
             self.config.angular_search_deg,
@@ -92,6 +101,10 @@ class ScanMatcher:
                         best_score = score
                         best_pose = pose
 
+        if not self._meaningfully_better(initial_score, best_score):
+            best_pose = initial
+            best_score = initial_score
+
         return ScanMatchResult(
             delta_pose=best_pose,
             score=best_score,
@@ -99,6 +112,14 @@ class ScanMatcher:
             current_points=len(current_points),
             accepted=best_score <= self.config.max_accepted_score,
         )
+
+    def _meaningfully_better(self, initial_score: float, best_score: float) -> bool:
+        improvement = initial_score - best_score
+        if improvement < self.config.min_score_improvement:
+            return False
+        if initial_score <= 0:
+            return improvement > 0
+        return improvement / initial_score >= self.config.min_score_improvement_ratio
 
 
 def scan_to_points(

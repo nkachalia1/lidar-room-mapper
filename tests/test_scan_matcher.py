@@ -41,6 +41,35 @@ def test_scan_matcher_recovers_small_relative_pose() -> None:
     assert result.accepted is True
 
 
+def test_scan_matcher_prefers_zero_when_improvement_is_tiny() -> None:
+    world_points = [
+        (1.0, 0.0),
+        (1.2, 0.35),
+        (0.55, 1.1),
+        (1.75, -0.45),
+        (0.25, -1.1),
+        (-0.7, 0.65),
+        (-1.35, -0.2),
+        (-0.4, -1.45),
+        (1.9, 0.9),
+        (-1.1, 1.35),
+    ]
+    scan = points_to_scan(world_points)
+    matcher = ScanMatcher(
+        ScanMatchConfig(
+            linear_search_m=0.15,
+            angular_search_deg=6.0,
+            linear_step_m=0.05,
+            angular_step_deg=2.0,
+        )
+    )
+
+    result = matcher.match(scan, scan)
+
+    assert result.delta_pose == Pose2D()
+    assert result.accepted is True
+
+
 def test_occupancy_grid_integrates_scan_at_pose() -> None:
     grid = OccupancyGrid()
     scan = LidarScan(

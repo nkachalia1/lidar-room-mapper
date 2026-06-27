@@ -36,6 +36,7 @@ The `scan-match` command estimates relative motion between consecutive LiDAR sca
 - Convert each scan into a bounded 2D point cloud.
 - Search small translations and rotations around the prior pose estimate.
 - Score each candidate by nearest-neighbor alignment error.
+- Prefer zero motion unless a candidate improves the score by a meaningful margin.
 - Compose the best relative transform into a cumulative 2D pose.
 
 This is intentionally a first SLAM building block rather than a full loop-closure system. It gives the project a clean place to add better scan matching, odometry, or camera-based pose priors later.
